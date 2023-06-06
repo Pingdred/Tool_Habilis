@@ -1,0 +1,171 @@
+{
+    "tools_list": [
+        {
+            "name": "get_time",
+            "description": "Retrieves current time",
+            "examples": [
+                "What is the current time?",
+                "Can you tell me the current time?",
+                "What's the time right now?",
+                "Give me the current time, please.",
+                "What's the clock showing?"
+            ],
+            "arguments": {}
+        },
+        {
+            "name": "get_date",
+            "description": "Retrieves current date",
+            "examples": [
+                "What is today's date?",
+                "Can you tell me the current date?",
+                "Give me the date for today.",
+                "What's the date today?",
+                "Tell me the current date and month."
+            ],
+            "arguments": {}
+        },
+        {
+            "name": "get_position",
+            "description": "Retrieves current GPS location.",
+            "examples": [
+                "What is my current location?",
+                "Can you tell me my GPS coordinates?",
+                "What's my current GPS position?",
+                "Give me my location, please.",
+                "Where am I right now?"
+            ],
+            "arguments": {}
+        },
+        {
+            "name": "web_pilot",
+            "description": "Retrieve the content of a web page.",
+            "examples": [
+                "Retrieve the content of www.example.com",
+                "Can you fetch the content of a website for me?",
+                "I need to get the information from a web page.",
+                "Get me the HTML of a specific webpage.",
+                "Fetch the data from a website."
+            ],
+            "arguments": {
+                "page_url": "The url of the page to retrieve."
+            }
+        },
+        {
+            "name": "simple_calculator",
+            "description": "Performs one of addition, subtraction, multiplication and division operations between two numbers.",
+            "examples": [
+                "What is 5 plus 3?",
+                "Calculate 10 minus 4.",
+                "Multiply 6 by 7.",
+                "Divide 12 by 3.",
+                "Perform the operation 9 plus 2."
+            ],
+            "arguments": {
+                "first_number": "The first number for the calculation.",
+                "second_number": "The second number for the calculation."
+            }
+        },
+        {
+            "name": "google_search",
+            "description": "Search something using Google.",
+            "examples": [
+                "Search for the latest news on climate change.",
+                "Find information about Albert Einstein.",
+                "Can you look up the definition of a word for me?",
+                "What are the best restaurants in New York City?",
+                "Search for images of cute puppies."
+            ],
+            "arguments": {
+                "search_query": "The query search."
+            }
+        },
+        {
+            "name": "bing_search",
+            "description": "Search something using Bing.",
+            "examples": [
+                "Search for the weather forecast in London.",
+                "Find the lyrics of a song for me.",
+                "Can you look up famous quotes by Shakespeare?",
+                "What are the top movies in theaters right now?",
+                "Search for videos of funny cat moments."
+            ],
+            "arguments": {
+                "search_query": "The query search."
+            }
+        },
+        {
+            "name": "mysql_query",
+            "description": "Select data from a MySQL database.",
+            "examples": [
+                "Retrieve all users from the 'customers' table.",
+                "Get the total sales for the past month.",
+                "Can you fetch the product details from the database?",
+                "Find the highest-rated movies in the 'movies' table.",
+                "Search for orders placed by a specific customer."
+            ],
+            "arguments": {
+                "select_query": "The select query to perform."
+            }
+        },
+        {
+            "name": "wolfram",
+            "description": "Access computation, math, curated knowledge & real-time data through Wolfram Alpha and Wolfram Language.",
+            "examples": [
+                "What is the integral of x^2?",
+                "Calculate the square root of 25.",
+                "How many kilometers are in 10 miles?",
+                "Solve the equation x^2 + 3x - 4 = 0.",
+                "Get information about the chemical element sodium."
+            ],
+            "arguments": {
+                "wolfram_query": "The query to perform."
+            }
+        },
+        {
+            "name": "calendar_read",
+            "description": "Used to read events from a calendar",
+            "examples": [
+                "What events do I have scheduled for tomorrow?",
+                "Can you tell me what's on my calendar for next week?",
+                "List all appointments for today.",
+                "What are the upcoming events on my calendar?",
+                "Retrieve the events for a specific date."
+            ],
+            "arguments": {
+                "day": "The day to read events for"
+            }
+        },
+        {
+            "name": "calendar_create",
+            "description": "Used to create an event in a calendar.",
+            "examples": [
+                "Add a meeting with John Doe tomorrow at 2 PM.",
+                "Create a new event called 'Birthday Party' on June 10th.",
+                "Schedule a conference call for next Monday at 9 AM.",
+                "Add an appointment with the doctor on July 15th at 3:30 PM.",
+                "Create a reminder for the project deadline on August 5th."
+            ],
+            "arguments": {
+                "event_name": "The name of the event.",
+                "event_date": "The date of the event.",
+                "event_time": "The time of the event.",
+                "location": "The location of the event.",
+                "description": "A description of the event."
+            }
+        },
+        {
+            "name": "bus",
+            "description": "Retrieve the list of buses arriving at a given stop.",
+            "examples": [
+                "What buses are arriving at Times Square?",
+                "When is the next bus arriving at my stop?",
+                "Can you check the bus schedule for route 123?",
+                "Find the bus timings for the nearest bus stop.",
+                "Get the list of buses coming to the downtown station."
+            ],
+            "arguments": {
+                "location": "The location or stop to check for buses."
+            }
+        }
+    ]
+}
