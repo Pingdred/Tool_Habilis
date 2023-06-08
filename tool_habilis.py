@@ -1,173 +1,170 @@
+import langchain.embeddings as le
 import numpy as np
 from qdrant_client import QdrantClient
 from qdrant_client.http import models
 
-
-class THabilis:
-
-    _qdrant_client = None
-    _vector_size = 0
-    _embedder = None
-    _tools_colection_name = "tools_info"
-    tools_count = 0
-
-    def __init__(self, qdrant_client: QdrantClient, embedder, vector_size: int):
-        self._qdrant_client = qdrant_client
-        self._vector_size = vector_size
-        self._embedder = embedder
-
-        if not self.collection_exists(self._tools_colection_name):
-            print("CREAZIONE TOOL COLLECTION")
-            self.__recreate_info_collection()
-        
-        collection_info = self._qdrant_client.get_collection(self._tools_colection_name)
-        self.tools_count = collection_info.points_count
-        print(self.tools_count)
+import tool_example_collection as txc 
 
 
-    def load(self, tools: list):
-        print("Loading tools...")
-        for t in tools:
-            print(f"\t{t['name']}")
-            self.__recreate_tool_collection(t)
+class ToolHabilis:
 
-    def select_by_mean(self, query: str, limit: int = 1) -> str:
-        hits = self._qdrant_client.search(
-            collection_name=self._tools_colection_name,
-            query_vector=('mean_point',self._embedder.embed_query(query)),
-            limit=limit
-        )
+    def __init__(self, qdrant_client: QdrantClient, embedder: le.OpenAIEmbeddings | le.HuggingFaceEmbeddings, vector_size: int, tools_collection_name: str = "tools_info"):
+        self.__qdrant_client = qdrant_client
+        self.__vector_size = vector_size
+        self.__tools_collection_name = tools_collection_name
+        self.__embedder = embedder
+        self.__tool_example_collection = txc.ToolExamplesCollection(self.__qdrant_client, embedder, self.__vector_size)
 
-        for elem in hits:
-            print(f"MEAN VECTOR:\t {elem.payload['name']} \t {elem.score}")
+        try:
+            self.__qdrant_client.get_collection(self.__tools_collection_name)
+        except ValueError:
+            self.__create_info_collection()
 
-    def select_by_description(self, query: str,  limit: int = 1) -> str:
-        hits = self._qdrant_client.search(
-            collection_name=self._tools_colection_name,
-            query_vector=('description',self._embedder.embed_query(query)),
-            limit=limit
-        )
-
-        for elem in hits:
-            print(f"DESCR VECTOR\t {elem.payload['name']} \t {elem.score}")
-
-    def collection_exists(self, collection_name: str) -> bool:
-        # Check that the given collection exists
-        for c in self._qdrant_client.get_collections().collections:
-            if collection_name == c.name:
-                return True
-
-        return False
-
-    def print_tools_collection(self):
-        # Print tool_info collection
-        tools = self._qdrant_client.scroll(
-                collection_name='tools_info',
-                with_vectors=False,
-                with_payload=True,
-                limit=self.tools_count
-            )
-        
-        for v in tools[0]:
-            print("-"*10, f"{v.payload['name'].upper()}", "-"*10)
-            print(f"Description: {v.payload['description']}")
-            print("Arguments:")
-            for arg in v.payload['arguments'].items():
-                print(f"\t{arg[0]}: {arg[1]}")
-
-    def __recreate_info_collection(self):
+    def __create_info_collection(self):
         # Create new tools collection
-        self._qdrant_client.recreate_collection(
-                collection_name=self._tools_colection_name,
+        self.__qdrant_client.recreate_collection(
+                collection_name=self.__tools_collection_name,
                 vectors_config={
                     "description": models.VectorParams(
-                        size=self._vector_size,
+                        size=self.__vector_size,
                         distance=models.Distance.COSINE
                     ),
-                    "mean_point": models.VectorParams(
-                        size=self._vector_size,
+                    "centroid": models.VectorParams(
+                        size=self.__vector_size,
                         distance=models.Distance.COSINE
                     )
                 }
             )
+    
+    def add_tool(self, tool_name: str, tool_descr: str, examples: list[str], tool_args: list[tuple]) -> bool:
 
-    def __recreate_tool_collection(self, tool: dict):
-        # Create new tool examples collection
-        self._qdrant_client.recreate_collection(
-            collection_name=tool["name"],
-            vectors_config=models.VectorParams(
-                size=self._vector_size,
-                distance=models.Distance.COSINE
-            )
-        )
+        if not self.__tool_example_collection.create_examples_collection(tool_name, examples):
+            return False
 
-        # Add example to collection
-        for idx, example in enumerate(tool["examples"]):
-            self.__add_example(idx,tool["name"], example)
+        centroid = self.__tool_example_collection.centroid(tool_name)
+        similarity, vector, text = self.__tool_example_collection.least_similar_examples(tool_name)[0]
 
-        # Add tool to available tools
-        self.__add_tool(tool)
-
-    def __add_example(self, idx: int, tool_name: str, example: str):
-        # Insert examples vectors into tool examples collection
-        self._qdrant_client.upsert(
-            collection_name=tool_name,
+        self.__qdrant_client.upsert(
+            collection_name=self.__tools_collection_name,
             points=[
                 models.PointStruct(
-                    id=idx,
-                    vector=self._embedder.embed_query(example),
-                    payload={
-                        "name": tool_name,
-                        "example_text": example,
-                    }
-                )
-                
-            ]
-        )
-
-    def __add_tool(self, tool: dict):
-
-        mean_vector = self.__mean_vector(tool["name"])
-
-        self._qdrant_client.upsert(
-            collection_name=self._tools_colection_name,
-            points=[
-                models.PointStruct(
-                    id=self.tools_count,
+                    id=self.tools_count(),
                     vector={
-                        "description": self._embedder.embed_query(tool["description"]),
-                        "mean_point": mean_vector
+                        "description": self.__embedder.embed_query(tool_descr),
+                        "centroid": centroid
                     },
                     payload={
-                        "name": tool["name"],
-                        "description": tool["description"],
-                        "arguments": tool["arguments"]
-                        #"variance": self.__variance(tool["name"])
+                        "name": tool_name,
+                        "description": tool_descr,
+                        "arguments": tool_args,
+                        "least_similar_example": {
+                            "vector": vector,
+                            "similarity": similarity,
+                            "text": text
+                        },
+                        "margin": 0.01,
+                        "similarities_rms": 0,
+                        "similarities_variance": 0
                     }
                 )
             ]
         )
-        self.tools_count += 1
-        print("ADDED TO TOOL COLLECTION")
 
-    def _get_all_examples(self, collection: str) -> list:
-        examples = self._qdrant_client.scroll(
-            collection_name=collection,
-            with_vectors=True,
-            with_payload=False
+        return True
+
+    def list_tools(self) -> list:
+        tools = self.__qdrant_client.scroll(
+            collection_name=self.__tools_collection_name,
+            with_vectors=True
+        )
+        
+        return tools[0]
+
+    def select_by_centroid_sim(self, query: str, limit: int = 1, limit_similarity: bool = True) -> list[tuple[str,float]]:
+        hits = self.__qdrant_client.search(
+            collection_name=self.__tools_collection_name,
+            query_vector=('centroid',self.__embedder.embed_query(query)),
+            limit=limit
         )
 
-        # extract vectors from result
-        vectors = []
-        for v in examples[0]:
-            vectors.append(v.vector)
+        res = []
+        for elem in hits:
+            margin = elem.payload["margin"]
 
-        return vectors
+            if limit_similarity:
+                if (elem.score+margin) >= elem.payload['least_similar_example']['similarity']:
+                    res.append((elem.payload['name'], elem.score))
+            else:
+                res.append((elem.payload['name'], elem.score))            
+        
+        return res
+    
+    def select_by_description_sim(self, query: str,  limit: int = 1) -> str:
+        hits = self.__qdrant_client.search(
+            collection_name=self.__tools_collection_name,
+            query_vector=('description',self.__embedder.embed_query(query)),
+            limit=limit
+        )
+        
+        res = map(lambda elem: (elem.payload['name'], elem.score), hits)
+        return list(res)
 
-    def __mean_vector(self, collection: str) -> list:
-        vectors = self._get_all_examples(collection)
-        return np.mean(vectors, axis=0).tolist()
+    def print_tools_collection(self):
 
-    # def __variance(self, collection: str) -> float:
-    #     vectors = self._get_all_examples(collection)
-    #     return np.var(vectors)
+        # Print tools_info collection
+        tools = self.list_tools()
+        
+        for v in tools[0]:
+            print("-"*20, f"{v.payload['name'].upper()}", "-"*20)
+            print(f"Description: {v.payload['description']}")
+            print("Arguments:")
+            for arg in v.payload['arguments'].items():
+                print(f"\t{arg[0]}: {arg[1]}")
+            print()
+
+    def tools_count(self) -> int:
+        collection_info = self.__qdrant_client.get_collection(self.__tools_collection_name)
+        return collection_info.points_count
+
+    def __get_tool(self, tool_name: str):
+        tool = self.__qdrant_client.scroll(
+            collection_name=self.__tools_collection_name,
+            with_vectors=True,
+            scroll_filter=models.Filter(
+                must=[
+                    models.FieldCondition(
+                        key="name",
+                        match=models.MatchValue(value=tool_name),
+                    ),
+                ]
+            ),
+        )
+
+        return tool[0][0]
+
+    def check_tools_similarity(self, min_similarity: float = 0):
+        tools = self.list_tools()
+        collition = []
+        for index, elem_1 in enumerate(tools):
+            for elem_2 in tools[index+1:]:
+                similarity = self.__collide(elem_1.payload['name'], elem_2.payload['name'])
+                if similarity >= min_similarity:
+                    collition.append((elem_1.payload['name'], elem_2.payload['name'], similarity))
+        
+        return collition
+
+    def __collide(self, t_1: str, t_2: str) -> float:
+        t_1 = self.__get_tool(t_1)
+        t_2 = self.__get_tool(t_2)
+
+        t_1_centroid = np.array(t_1.vector['centroid'])
+        t_2_centroid = np.array(t_2.vector['centroid'])
+        centroid_similarity = np.dot(t_1_centroid, t_2_centroid)
+
+        #first_tool_description = np.array(first_tool.vector['centroid'])
+        #second_tool_description = np.array(second_tool.vector['centroid'])
+        #description_similarity = np.dot(first_tool_description, second_tool_description)
+
+        #if centroid_similarity 
+
+        return centroid_similarity
