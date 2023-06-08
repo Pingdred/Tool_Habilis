@@ -1,6 +1,8 @@
-constants.py
+.vscode
 __pycache__
-qdb_plugin
-README.md
+qdb_plugins
 
+api_keys.py
 tools_langchain.py
+
+tools_15.json
