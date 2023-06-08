@@ -20,7 +20,7 @@
                 "Can you tell me the current date?",
                 "Give me the date for today.",
                 "What's the date today?",
-                "Tell me the current date and month."
+                "Tell me the current date."
             ],
             "arguments": {}
         },
@@ -129,7 +129,7 @@
                 "Can you tell me what's on my calendar for next week?",
                 "List all appointments for today.",
                 "What are the upcoming events on my calendar?",
-                "Retrieve the events for a specific date."
+                "What appointments do I have today?"
             ],
             "arguments": {
                 "day": "The day to read events for"
