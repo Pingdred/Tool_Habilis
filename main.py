@@ -1,44 +1,72 @@
+import json
 import sys
 
-import json
-
-from langchain.embeddings import OpenAIEmbeddings
+from langchain.embeddings import HuggingFaceEmbeddings, OpenAIEmbeddings
 from qdrant_client import QdrantClient
 
-from tool_habilis import THabilis as th
+from tool_habilis import ToolHabilis
+import api_keys
 
-import constants
+
+QDRANT_DB_PATH = "./qdb_plugins"
+SIMILAR_TOOL_THRESHOLD = 0.3
+EMBEDDER_VECTOR_SIZE = 768
 
 
-def main():
-    client = QdrantClient(path="./qdb_plugin")
-    embedder = OpenAIEmbeddings(openai_api_key=constants.OPENAI_KEY)
+if __name__ == "__main__":
 
-    tool_chooser = th(client, embedder, 1536)
+    client = QdrantClient(path=QDRANT_DB_PATH)
+    embedder = HuggingFaceEmbeddings()
+    #embedder = OpenAIEmbeddings(openai_api_key=api_keys.OPENAI_KEY)
+    #chat = ChatOpenAI(temperature=0)
+    tool_chooser = ToolHabilis(client, embedder, EMBEDDER_VECTOR_SIZE)
 
-    if len(sys.argv) >= 2 and sys.argv[1] == '-r':
-        with open('tools.json', 'r') as tools_file:
+    if len(sys.argv) == 2:
+        print("Opening tools file.")
+        with open(sys.argv[1], 'r') as tools_file:
             tools = json.load(tools_file)
 
-        print("Tools file loaded.")
-        tool_chooser.load(tools['tools_list'])
+        tools = tools['tools_list']
+        
+        print("Loading tools...")
+        for t in tools:
+            res = tool_chooser.add_tool(t['name'], t['description'], t['examples'], t['arguments'])
+            print(f"\t{t['name']}: {'OK' if res else 'ALREADY EXISTS'}")
 
+    #tool_chooser.print_tools_collection()
+    print("Available tools: ", tool_chooser.tools_count())
 
-    tool_chooser.print_tools_collection()
+    similar_tools = tool_chooser.check_tools_similarity(SIMILAR_TOOL_THRESHOLD)
+    if len(similar_tools) > 0:
+        print(f"POSSIBLE SIMILAR TOOLS ({SIMILAR_TOOL_THRESHOLD}): {len(similar_tools)}")
+        for c in similar_tools:
+            print(f"\t{c[0]} -> {c[1]}: {c[2]}")
+    else:
+        print("NO SIMILAR TOOLS")
 
-    print(tool_chooser.tools_count)
 
     while True:
-
-        query = input("Query: ")
+        print("-"*30)
+        query = input("Query (q to exit): ")
 
         if query == 'q' or query == '':
             break
 
-        tool_chooser.select_by_mean(query)
-        tool_chooser.select_by_description(query)
-        print("-"*20)
+        centroid_sim_hit= tool_chooser.select_by_centroid_sim(query)
+        centroid_sim_nearest= tool_chooser.select_by_centroid_sim(query=query, limit_similarity=False)
+        description_sim_hit = tool_chooser.select_by_description_sim(query)
 
+        print("CENTROID SIMILARITY HIT")
+        for elem in centroid_sim_hit:
+            print(f"\t {elem[1]}: {elem[0]} ")
 
-if __name__ == "__main__":
-    main()
+        print("CENTROID NEAREST")
+        for elem in centroid_sim_nearest:
+            print(f"\t {elem[1]}: {elem[0]} ")
+
+        print("DESCRIPTION NEAREST")
+        for elem in description_sim_hit:
+            print(f"\t {elem[1]}: {elem[0]} ")
+
+        print()
+        
