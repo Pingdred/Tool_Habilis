@@ -20,22 +20,6 @@ class ToolHabilis:
         except ValueError:
             self.__create_info_collection()
 
-    def __create_info_collection(self):
-        # Create new tools collection
-        self.__qdrant_client.recreate_collection(
-                collection_name=self.__tools_collection_name,
-                vectors_config={
-                    "description": models.VectorParams(
-                        size=self.__vector_size,
-                        distance=models.Distance.COSINE
-                    ),
-                    "centroid": models.VectorParams(
-                        size=self.__vector_size,
-                        distance=models.Distance.COSINE
-                    )
-                }
-            )
-    
     def add_tool(self, tool_name: str, tool_descr: str, examples: list[str], tool_args: list[tuple]) -> bool:
 
         if not self.__tool_example_collection.create_examples_collection(tool_name, examples):
@@ -126,6 +110,33 @@ class ToolHabilis:
         collection_info = self.__qdrant_client.get_collection(self.__tools_collection_name)
         return collection_info.points_count
 
+    def check_tools_similarity(self, min_similarity: float = 0):
+        tools = self.list_tools()
+        collition = []
+        for index, elem_1 in enumerate(tools):
+            for elem_2 in tools[index+1:]:
+                similarity = self.__collide(elem_1.payload['name'], elem_2.payload['name'])
+                if similarity >= min_similarity:
+                    collition.append((elem_1.payload['name'], elem_2.payload['name'], similarity))
+        
+        return collition
+
+    def __create_info_collection(self):
+        # Create new tools collection
+        self.__qdrant_client.recreate_collection(
+                collection_name=self.__tools_collection_name,
+                vectors_config={
+                    "description": models.VectorParams(
+                        size=self.__vector_size,
+                        distance=models.Distance.COSINE
+                    ),
+                    "centroid": models.VectorParams(
+                        size=self.__vector_size,
+                        distance=models.Distance.COSINE
+                    )
+                }
+            )
+    
     def __get_tool(self, tool_name: str):
         tool = self.__qdrant_client.scroll(
             collection_name=self.__tools_collection_name,
@@ -141,17 +152,6 @@ class ToolHabilis:
         )
 
         return tool[0][0]
-
-    def check_tools_similarity(self, min_similarity: float = 0):
-        tools = self.list_tools()
-        collition = []
-        for index, elem_1 in enumerate(tools):
-            for elem_2 in tools[index+1:]:
-                similarity = self.__collide(elem_1.payload['name'], elem_2.payload['name'])
-                if similarity >= min_similarity:
-                    collition.append((elem_1.payload['name'], elem_2.payload['name'], similarity))
-        
-        return collition
 
     def __collide(self, t_1: str, t_2: str) -> float:
         t_1 = self.__get_tool(t_1)
