@@ -41,12 +41,11 @@ A tool is represented as a JSON object, and is structured as follows:
      "examples": [
          "example_1",
          "example_2",
-         "...",
+         "example_3"
      ],
      "arguments": {
-         "topic_name_1": "topic_description_1",
-         "topic_name_2": "topic_description_2",
-         "topic_name_3": "topic_description_3"
+         "argument_name_1": "topic_description_1",
+         "argument_name_2": "topic_description_2"
      }
 }
 ```
@@ -91,7 +90,7 @@ The second type of collection, which we will call `tools_info_collection`, is us
 
 ```Python
 client.recreate_collection(
-     collection_name=self.__tools_collection_name,
+     collection_name=tools_collection_name,
      vectors_config={
          "description": models.VectorParams(
              size=vector_size,
@@ -141,7 +140,7 @@ A tool is created as follows:
 2. If it doesn't exist the `tools_info_collection` is created;
 3. Creation of the `tool_examples_collection` collection, if a homonymous one already exists the creation of the tool is interrupted;
 4. Embedding and inserting the various examples in the `tool_examples_collection` created;
-5. Calculation of the centroid (midpoint) of the `tool_examples_collection`;
+5. Calculation of the centroid (mean point) of the `tool_examples_collection`;
 6. Calculation of the example least similar to the midpoint using cosin similarity;
 7. Inserting the tool with its parameters in the `tools_info_collection`
 
