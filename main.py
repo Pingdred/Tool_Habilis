@@ -10,15 +10,16 @@ import api_keys
 
 QDRANT_DB_PATH = "./qdb_plugins"
 SIMILAR_TOOL_THRESHOLD = 0.3
-EMBEDDER_VECTOR_SIZE = 768
-
+# EMBEDDER_VECTOR_SIZE = 1536 # OpenAI
+EMBEDDER_VECTOR_SIZE = 768 # HuggingFace
 
 if __name__ == "__main__":
 
     client = QdrantClient(path=QDRANT_DB_PATH)
+
     embedder = HuggingFaceEmbeddings()
-    #embedder = OpenAIEmbeddings(openai_api_key=api_keys.OPENAI_KEY)
-    #chat = ChatOpenAI(temperature=0)
+    # embedder = OpenAIEmbeddings(openai_api_key=api_keys.OPENAI_KEY)
+
     tool_chooser = ToolHabilis(client, embedder, EMBEDDER_VECTOR_SIZE)
 
     if len(sys.argv) == 2:
@@ -33,16 +34,16 @@ if __name__ == "__main__":
             res = tool_chooser.add_tool(t['name'], t['description'], t['examples'], t['arguments'])
             print(f"\t{t['name']}: {'OK' if res else 'ALREADY EXISTS'}")
 
-    #tool_chooser.print_tools_collection()
-    print("Available tools: ", tool_chooser.tools_count())
+    # tool_chooser.print_tools_collection()
+    print("\nAvailable tools: ", tool_chooser.tools_count())
 
-    similar_tools = tool_chooser.check_tools_similarity(SIMILAR_TOOL_THRESHOLD)
+    similar_tools = tool_chooser.check_tools_collisions()
     if len(similar_tools) > 0:
-        print(f"POSSIBLE SIMILAR TOOLS ({SIMILAR_TOOL_THRESHOLD}): {len(similar_tools)}")
+        print(f"There are {len(similar_tools)} tools collisions:")
         for c in similar_tools:
             print(f"\t{c[0]} -> {c[1]}: {c[2]}")
     else:
-        print("NO SIMILAR TOOLS")
+        print("No tools collison")
 
 
     while True:
@@ -52,21 +53,28 @@ if __name__ == "__main__":
         if query == 'q' or query == '':
             break
 
-        centroid_sim_hit= tool_chooser.select_by_centroid_sim(query)
-        centroid_sim_nearest= tool_chooser.select_by_centroid_sim(query=query, limit_similarity=False)
+        midpoint_sim_hit= tool_chooser.select_by_midpoint_sim(query)
+        midpoint_sim_nearest= tool_chooser.select_by_midpoint_sim(query=query, limit_similarity=False)
         description_sim_hit = tool_chooser.select_by_description_sim(query)
 
-        print("CENTROID SIMILARITY HIT")
-        for elem in centroid_sim_hit:
-            print(f"\t {elem[1]}: {elem[0]} ")
+        print("HITTED TOOL")
+        for elem in midpoint_sim_hit:
+            print(f"{elem[0]}:")
+            print(f"\tQuery sim: {round(elem[1],4)}")
+            print(f"\tRadius: {round(elem[2],4)}")
+            print(f"\tMargin: {round(elem[3],4)}\n")
 
-        print("CENTROID NEAREST")
-        for elem in centroid_sim_nearest:
-            print(f"\t {elem[1]}: {elem[0]} ")
+        print("NEAREST BY MIDPOINT")
+        for elem in midpoint_sim_nearest:
+            print(f"{elem[0]}:")
+            print(f"\tQuery sim: {round(elem[1],4)}")
+            print(f"\tRadius: {round(elem[2],4)}")
+            print(f"\tMargin: {round(elem[3],4)}\n")
 
-        print("DESCRIPTION NEAREST")
+        print("NEAREST BY DESCRIPTION ")
         for elem in description_sim_hit:
-            print(f"\t {elem[1]}: {elem[0]} ")
+            print(f"{elem[0]}:")
+            print(f"Query sim: {round(elem[1],4)}")
 
         print()
         
