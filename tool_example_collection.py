@@ -92,9 +92,22 @@ class ToolExamplesCollection:
         vectors = map(lambda x: x[0], examples)
         return self.__get_centroid(list(vectors))
 
+    def avg_similarity(self, tool_name: str):
+        examples = self.list_examples(tool_name)
+        vectors = map(lambda x: x[0], examples)
+        return self.__get_avg_similarity(list(vectors))
+
     def examples_count(self, tool_name: str) -> int:
         collection_info = self.__qdrant_client.get_collection(tool_name)
         return collection_info.points_count
 
-    def __get_centroid(self, vectors: list = None) -> int:
+    def __get_centroid(self, vectors: list) -> list[int]:
         return np.mean(vectors, axis=0).tolist()
+
+    def __get_avg_similarity(self, vectors: list) -> float:
+        similaties = []
+        for idx, v1 in enumerate(vectors):
+            for v2 in vectors[(idx+1):]:
+                similaties.append(np.dot(v1,v2))
+
+        return np.mean(similaties)
