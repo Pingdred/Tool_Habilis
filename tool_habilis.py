@@ -24,6 +24,7 @@ class ToolHabilis:
 
         less_similar_example = self.__less_similar_examples(examples)[0]
         midpoint = np.mean( [less_similar_example[0][1], less_similar_example[1][1]], axis=0).tolist()
+        radius = np.dot(less_similar_example[0][1], midpoint)
         
         self.__qdrant_client.upsert(
             collection_name=self.__tools_collection_name,
@@ -38,8 +39,9 @@ class ToolHabilis:
                         "name": tool_name,
                         "description": tool_descr,
                         "arguments": tool_args,
-                        "radius": less_similar_example[2],
-                        "margin": 0.1,
+                        "radius": radius,
+                        "less_similar": less_similar_example[0][1],
+                        "margin": 0.01,
                         "similarities_rms": 0,
                         "similarities_variance": 0
                     }
