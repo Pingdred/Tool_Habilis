@@ -52,12 +52,24 @@ class ToolHabilis:
         return True
 
     def list_tools(self) -> list:
-        tools = self.__qdrant_client.scroll(
-            collection_name=self.__tools_collection_name,
-            with_vectors=True
-        )
+        vectors = []
+        offset = 0
+        while True:
+            tools, offset= self.__qdrant_client.scroll(
+                collection_name=self.__tools_collection_name,
+                with_vectors=True,
+                limit=self.tools_count(),
+                offset=offset
+            )
+
+             # extract vectors from result
+            for t in tools:
+                vectors.append(t)
+            
+            if offset is None:
+                break
         
-        return tools[0]
+        return vectors
 
     def select_by_midpoint_sim(self, query: str, limit: int = 1, limit_similarity: bool = True) -> list[tuple[str,float]]:
         hits = self.__qdrant_client.search(
