@@ -120,7 +120,7 @@ class ToolHabilis:
         tools = self.list_tools()
         collisions = []
         for index, elem_1 in enumerate(tools):
-            for elem_2 in tools[index+1:]:
+            for elem_2 in tools[index+1: len(tools)-1]:
                 similarity, collision = self.__collide(elem_1.payload['name'], elem_2.payload['name'])
                 
                 if collision:
@@ -132,7 +132,7 @@ class ToolHabilis:
         less_similar = []
 
         for idx, e_1 in enumerate(examples):
-            for e_2 in examples[(idx+1):]:
+            for e_2 in examples[(idx+1): len(examples)-1]:
                 e_1_embedded = self.__embedder.embed_query(e_1)
                 e_2_embedded = self.__embedder.embed_query(e_2)
 
@@ -141,7 +141,7 @@ class ToolHabilis:
 
         less_similar = sorted(less_similar, key=lambda x: x[2])
 
-        return less_similar [:limit]
+        return less_similar[:limit]
 
     def __create_info_collection(self):
         # Create new tools collection
